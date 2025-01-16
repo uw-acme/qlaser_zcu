@@ -10,3 +10,5 @@ It is recommended to create a virtual environment with `python -m venv .venv` an
 
 ## Develop
 This repo/package is build with [Poetry](https://python-poetry.org/docs/). You may clone this repo into your devices and setup a development envireonment with `poetry install` command. This will craete a python environment and download all nessisary packages into the environment
+
+To build a documentation, goto `docs` folder and run `make html` command. This will create a html documentation in `docs/build/html` folder. Open `index.html` file in a browser to view the documentation

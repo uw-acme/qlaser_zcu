@@ -1,8 +1,7 @@
-import sys
 import serial
 import serial.tools.list_ports
 from serial.serialutil import SerialException
-from typing import TypedDict, Union
+from typing import TypedDict
 from loguru import logger
 
 C_BITS_ADC = 12
