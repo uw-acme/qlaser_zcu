@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "qlaser-zcu"
+version = "0.1.0"
+description = "Python API connect to the nanoq system running in the ZCU102 FPGA"
+authors = ["Eric Yu <i@eyhc.link>"]
+readme = "README.md"
+packages = [{include = "qlaser_zcu"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyserial = "^3.5"
+loguru = "^0.7.3"
+numpy = "^2.2.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
