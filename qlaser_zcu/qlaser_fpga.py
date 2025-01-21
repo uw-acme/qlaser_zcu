@@ -169,6 +169,9 @@ class QlaserFPGA:
             return
         for i in range(start_addr, start_addr + len(values) - 1, 2):
             self.write_waves(i, values[i-start_addr], values[i-start_addr+1])
+        # If the length of the values is odd, write the last value
+        if len(values) % 2:
+            self.write_waves(start_addr + len(values) - 1, values[-1], 0)
 
     def write_waves(self, addr: int, val16_lo: int, val16_up: int):
         """Write to wave table with fix-size of 2 values at given even-numbered address.
