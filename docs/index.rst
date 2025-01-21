@@ -11,4 +11,5 @@ qlaser-zcu documentation
    :maxdepth: 2
 
    overview.rst
+   pulsechannel.rst
    api.rst
