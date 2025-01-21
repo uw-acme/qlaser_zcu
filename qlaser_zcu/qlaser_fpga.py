@@ -158,7 +158,7 @@ class QlaserFPGA:
         self.ser.write(f'{channel}c'.encode('utf-8'))
         
     def write_wave_table(self, start_addr: int, values: list[int]):
-        """Write a list of values to the wave table starting at the given address
+        """Write a list of values pairs to the wave table starting at the given even-numbered address.
 
         Args:
             start_addr (int): Starting address of the wave table
@@ -167,10 +167,8 @@ class QlaserFPGA:
         if bool(start_addr % 2):
             self.logger.error("Start address must be even!")
             return
-        v_ndata16 = 1
-        for i in range(start_addr, start_addr + len(values), 2):
-            self.write_waves(i, values[v_ndata16 - 1], values[v_ndata16])
-            v_ndata16 += 2
+        for i in range(start_addr, start_addr + len(values) - 1, 2):
+            self.write_waves(i, values[i-start_addr], values[i-start_addr+1])
 
     def write_waves(self, addr: int, val16_lo: int, val16_up: int):
         """Write to wave table with fix-size of 2 values at given even-numbered address.

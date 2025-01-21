@@ -112,8 +112,12 @@ def load_waves(
     
     for entry in range(len(definitions)):
         logger.info(f"Loading wave {entry} into FPGA")
+        # Make sure entry start address is even
+        if definitions[entry]["start_addr"] % 2 != 0:
+            logger.error(f"Entry {entry} start address is not even. It may not work correctly.")
+        
         if time_type == "relative" and entry > 0:
-            start_time = definitions[entry - 1]["start_time"] + 2 * definitions[entry]["wave_len"] + definitions[entry]["sustain"] + definitions[entry]["start_time"]
+            start_time = definitions[entry - 1]["start_time"] + 2 * definitions[entry - 1]["wave_len"] + definitions[entry - 1]["sustain"] + definitions[entry]["start_time"]
         elif time_type == "absolute" or (time_type == "relative" and entry == 0):
             start_time = definitions[entry]["start_time"]
         else:
@@ -134,7 +138,9 @@ def load_waves(
             if nval < 0:
                 nval = 0  # pad negative numbers with 0
             raw_table.append(nval)
-        
+        # Append an additional zero if the length of the wave is odd
+        if definitions[entry]["wave_len"] % 2 != 0:
+            raw_table.append(0)
         fpga.write_wave_table(definitions[entry]["start_addr"], raw_table)
     
     fpga.print_all(type=flush_type)  # flush output
