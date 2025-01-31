@@ -13,11 +13,23 @@ BIT_FRAC = 8
 BIT_FRAC_GAIN = C_BITS_GAIN_FACTOR - 1
 PULSE_START_MIN = 5  # Minimum start time for pulse
 
+VREF_INTERNAL = "internal"
+VREF_EXTERNAL = "external"
+VREF_TYPE     = VREF_INTERNAL   # or 'external'
+VOLTAGE_REF   = 1.25
+#VOLTAGE_REF   = 3.3
+
+# Configuration
+DAC_BITS_RES  = 12
+NUM_CHAN_DC   = 16
+NUM_CHAN_AC   =  4
+
 # Commands
 CMD_REG_DUMP = b'P'  # Dump registers
 CMD_ECHO = b'e'  # Echo command
 CMD_RESET = b'\x52'  # Reset FPGA
 CMD_GPIO_RD = b'r'  # Read GPIO value
+CMD_GPIO_WR = b'o'  # Write GPIO value
 CMD_PULSE_TRIG = b'\x80'  # Single trigger for AC pulse
 CMD_PULSE_SEQ = b's'  # Sequence trigger for AC pulse
 CMD_PULSE_CHEN = b'C'  # Enable pulse channel

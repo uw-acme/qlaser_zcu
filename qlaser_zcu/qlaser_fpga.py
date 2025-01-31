@@ -1,18 +1,19 @@
 import serial
 import serial.tools.list_ports
+from .constants import *
 from serial.serialutil import SerialException
 from typing import TypedDict
 from loguru import logger
 
-C_BITS_ADC = 12
-C_BITS_ADDR_WAVE = 16
-C_BITS_GAIN_FACTOR = 16
-C_BITS_TIME_FACTOR = 16
-C_MAX_CHANNELS = 32
-C_ERR_BITS = 8
-BIT_FRAC = 8
-BIT_FRAC_GAIN = C_BITS_GAIN_FACTOR - 1
-PULSE_START_MIN = 4  # Minimum start time for pulse
+# C_BITS_ADC = 12
+# C_BITS_ADDR_WAVE = 16
+# C_BITS_GAIN_FACTOR = 16
+# C_BITS_TIME_FACTOR = 16
+# C_MAX_CHANNELS = 32
+# C_ERR_BITS = 8
+# BIT_FRAC = 8
+# BIT_FRAC_GAIN = C_BITS_GAIN_FACTOR - 1
+# PULSE_START_MIN = 4  # Minimum start time for pulse
 
 class PulseConfig(TypedDict):
     start_time: int
@@ -90,11 +91,28 @@ class QlaserFPGA:
         """
         self.ser.write(b'\x52')
         self.logger.debug("Sent soft reset command to FPGA")
-        # give fake values to all channel's first entry to ensure no register is left with garbage
-        self.sel_channel(channel=None)
-        self.entry_pulse_defn(0, 4, 0, 2, 1.0, 1.0, 0)  # set a fake value... TODO: temporary solution
+        
         self.print_all(type=flush_type)  # Clear the buffer
         
+        
+    def xil_out32(self, addr: int, data: int, cmd: int) -> None:
+        """Mimic Xil_Out32(addr, value) from the original C code. A generic write to FPGA function.
+
+        Args:
+            addr (int): Address to write to
+            data (int): Data to write
+            cmd (int): Write operation command, in hex format.
+            
+        Examples:
+            Write 0x1234 to address 0x5678 in the pulse definition RAM (cmd = 0x8A)
+            >>> xil_out32(0x5678, 0x1234, 0x8A)
+        """
+        self.ser.write(str(data).encode('utf-8') + b'\xDD')
+        self.print_all() # flush the buffer
+        
+        # Then, send the address to the PD ram
+        self.ser.write(str(addr).encode('utf-8') + bytes([cmd]))
+        self.print_all() # flush the buffer
     def __gpo_rd(self, format_spec="08x") -> str:
         """Read the general purpose output register
         
@@ -138,7 +156,7 @@ class QlaserFPGA:
         
         return format(int(err_hi, 16), f"0{C_ERR_BITS}b"), format(int(err_lo, 16), f"0{C_ERR_BITS}b")
 
-    def pulse_trigger(self, flush_type: str = "debug"):
+    def pulse_trigger(self, flush_type: str = "debug") -> None:
         """Tell FPGA to start the pulse sequence
         
         Args:
@@ -148,7 +166,7 @@ class QlaserFPGA:
         self.logger.debug("Sent trigger command to FPGA")
         self.print_all(type=flush_type)
 
-    def sel_pulse(self, seq_length: int, flush_type: str = "debug", channel: int | None = None):
+    def sel_pulse(self, seq_length: int, flush_type: str = "debug", channel: int | None = None) -> None:
         """Set the pulse sequence length
 
         Args:
@@ -158,7 +176,7 @@ class QlaserFPGA:
         self.ser.write(f'{seq_length}s'.encode('utf-8'))
         self.print_all(type=flush_type)
 
-    def sel_channel(self, channel: int | None = None):
+    def sel_channel(self, channel: int | None = None) -> None:
         """Select the channel to configure
 
         Args:
@@ -170,7 +188,7 @@ class QlaserFPGA:
             channel = 99
         self.ser.write(f'{channel}cC'.encode('utf-8'))
         
-    def write_dc_chan(self, ch: int, value: int):
+    def write_dc_chan(self, ch: int, value: int) -> None:
         """Write a value to DC channel
 
         Args:
@@ -193,7 +211,7 @@ class QlaserFPGA:
         self.print_all(type="debug")
         
         
-    def write_wave_table(self, start_addr: int, values: list[int]):
+    def write_wave_table(self, start_addr: int, values: list[int]) -> None:
         """Write a list of values pairs to the wave table starting at the given even-numbered address.
 
         Args:
@@ -209,7 +227,7 @@ class QlaserFPGA:
         if len(values) % 2:
             self.write_waves(start_addr + len(values) - 1, values[-1], 0)
 
-    def write_waves(self, addr: int, val16_lo: int, val16_up: int):
+    def write_waves(self, addr: int, val16_lo: int, val16_up: int) -> None:
         """Write to wave table with fix-size of 2 values at given even-numbered address.
 
         Args:
