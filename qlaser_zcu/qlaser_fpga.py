@@ -89,7 +89,7 @@ class QlaserFPGA:
         Args:
             flush_type (str, optional): Type of log message. Either "info" or "debug". Defaults to "debug".
         """
-        self.ser.write(b'\x52')
+        self.ser.write(CMD_RESET)
         self.logger.debug("Sent soft reset command to FPGA")
         
         self.print_all(type=flush_type)  # Clear the buffer
@@ -107,8 +107,8 @@ class QlaserFPGA:
             Write 0x1234 to address 0x5678 in the pulse definition RAM (cmd = 0x8A)
             >>> xil_out32(0x5678, 0x1234, 0x8A)
         """
-        self.ser.write(str(data).encode('utf-8') + b'\xDD')
-        self.print_all() # flush the buffer
+        self.ser.write(str(data).encode('utf-8') + CMD_SET_DATA)
+        self.print_all() # flush the buffer0
         
         # Then, send the address to the PD ram
         self.ser.write(str(addr).encode('utf-8') + bytes([cmd]))
@@ -125,7 +125,7 @@ class QlaserFPGA:
             str: Value of the general purpose output register
         """
         self.print_all(type="debug")  # Clear the buffer
-        self.ser.write(b'r')
+        self.ser.write(CMD_GPIO_RD)
         # This command is also used for real-time serial debug, with format of <some string message>: 0x<value>
         # Strip it to get the value
         data = self.ser.readline().decode('utf-8', errors="replace").strip().split("0x")
@@ -138,7 +138,7 @@ class QlaserFPGA:
             list[str]: List of all register values
         """
         self.print_all(type="debug")  # clear the buffer
-        self.ser.write(b'P')
+        self.ser.write(CMD_REG_DUMP)
         dumps = []
         for i in self.ser.readlines():
             dumps.append(i.decode('utf-8', errors="replace").strip())
@@ -173,11 +173,11 @@ class QlaserFPGA:
             seq_length (int): Total duration of the pulse sequence
             flush_type (str, optional): Type of log message. Either "info" or "debug". Defaults to "debug".
         """
-        self.ser.write(f'{seq_length}s'.encode('utf-8'))
+        self.ser.write(f'{seq_length}'.encode('utf-8') + CMD_PULSE_SEQ)
         self.print_all(type=flush_type)
 
     def sel_channel(self, channel: int | None = None) -> None:
-        """Select the channel to configure
+        """Select and enable channels
 
         Args:
             channel (int, optional): Channel to configure. Defaults to None to select all channels.
@@ -186,7 +186,17 @@ class QlaserFPGA:
             raise ValueError(f"Channel {channel} is out of range")
         if channel is None:
             channel = 99
-        self.ser.write(f'{channel}cC'.encode('utf-8'))
+        self.ser.write(f'{channel}'.encode('utf-8') + CMD_PULSE_CHSEL + CMD_PULSE_CHEN)
+        
+    def chan_sel(self, channel: int) -> None:
+        """Select a channel to configure
+
+        Args:
+            channel (int): Channel to configure
+        """
+        if channel > C_MAX_CHANNELS or channel < 1:
+            raise ValueError(f"Channel {channel} is out of range")
+        self.ser.write(f'{channel}'.encode('utf-8') + CMD_PULSE_CHSEL)
         
     def write_dc_chan(self, ch: int, value: int) -> None:
         """Write a value to DC channel
@@ -205,8 +215,8 @@ class QlaserFPGA:
         # Format address
         addr = (spi << 3) + dac_channel
         
-        self.ser.write(str(value).encode('utf-8') + b'\xDD')
-        self.ser.write(str(addr).encode('utf-8') + b'\x8D')
+        self.ser.write(str(value).encode('utf-8') + CMD_SET_DATA)
+        self.ser.write(str(addr).encode('utf-8') + CMD_DC_WR)
         
         self.print_all(type="debug")
         
@@ -241,8 +251,8 @@ class QlaserFPGA:
         addr32 = addr // 2
         if bool(addr % 2):
             self.logger.warning(f"Address {addr} is not even. Values may not be written correctly!")
-        self.ser.write(str(val16_up * 2**C_BITS_ADDR_WAVE + val16_lo).encode('utf-8') + b'\xDD')
-        self.ser.write(str(addr32).encode('utf-8') + b'\x9A')
+        self.ser.write(str(val16_up * 2**C_BITS_ADDR_WAVE + val16_lo).encode('utf-8') + CMD_SET_DATA)
+        self.ser.write(str(addr32).encode('utf-8') + CMD_WAVERAM_WR)
         
     def read_waves(self, addr: int) -> tuple[int, int]:
         """Read a chunk/pair of values from the wave table with a even-numbered start address
@@ -254,7 +264,7 @@ class QlaserFPGA:
             tuple[int, int]: Two 16-bit values read from the wave table. First one is the bottom 16 bits, second one is the top 16 bits.
         """
         addr32 = addr // 2
-        self.ser.write(str(addr32).encode('utf-8') + b'\xBA')
+        self.ser.write(str(addr32).encode('utf-8') + CMD_WAVERAM_RD)
         data = self.ser.readline().decode('utf-8', errors="replace").strip()
         return int(data) & 0xFFFF, int(data) >> 16
 
@@ -315,24 +325,24 @@ class QlaserFPGA:
         # 1) Write the Start Time
         n_wdata = n_start_time & 0x00FFFFFF
         n_waddr = 4 * n_entry  # offset calculation
-        self.ser.write(str(n_wdata).encode('utf-8') + b'\xDD')
-        self.ser.write(str(n_waddr).encode('utf-8') + b'\x8A')
+        self.ser.write(str(n_wdata).encode('utf-8') + CMD_SET_DATA)
+        self.ser.write(str(n_waddr).encode('utf-8') + CMD_PDEFN_WR)
 
         # 2) Write the Wave Length and Wave Address
         n_wdata = ((n_wave_len & 0x0FFF) << 16) | (n_wave_addr & 0x0FFF)
         n_waddr += 1
-        self.ser.write(str(n_wdata).encode('utf-8') + b'\xDD')
-        self.ser.write(str(n_waddr).encode('utf-8') + b'\x8A')
+        self.ser.write(str(n_wdata).encode('utf-8') + CMD_SET_DATA)
+        self.ser.write(str(n_waddr).encode('utf-8') + CMD_PDEFN_WR)
 
         # 3) Write the Scale Gain and Scale Address
         n_wdata = ((n_scale_gain & 0xFFFF) << 16) | (n_scale_addr & 0xFFFF)
         n_waddr += 1
-        self.ser.write(str(n_wdata).encode('utf-8') + b'\xDD')
-        self.ser.write(str(n_waddr).encode('utf-8') + b'\x8A')
+        self.ser.write(str(n_wdata).encode('utf-8') + CMD_SET_DATA)
+        self.ser.write(str(n_waddr).encode('utf-8') + CMD_PDEFN_WR)
 
         # 4) Write the Flattop
         n_wdata = n_flattop & 0x0001FFFF
         n_waddr += 1
-        self.ser.write(str(n_wdata).encode('utf-8') + b'\xDD')
-        self.ser.write(str(n_waddr).encode('utf-8') + b'\x8A')
+        self.ser.write(str(n_wdata).encode('utf-8') + CMD_SET_DATA)
+        self.ser.write(str(n_waddr).encode('utf-8') + CMD_PDEFN_WR)
         
