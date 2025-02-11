@@ -267,6 +267,35 @@ class QlaserFPGA:
         self.ser.write(str(addr32).encode('utf-8') + CMD_WAVERAM_RD)
         data = self.ser.readline().decode('utf-8', errors="replace").strip()
         return int(data) & 0xFFFF, int(data) >> 16
+    
+    def read_wave_table(self, start_addr: int, length: int) -> list[int]:
+        """Read a list of values from the wave table starting at the given even-numbered address.
+
+        Args:
+            start_addr (int): Starting address of the wave table
+            length (int): Number of values to read
+        
+        Returns:
+            list[int]: List of values read from the wave table
+        """
+        if start_addr < 0 or length < 0:
+            self.logger.error("Start address and length must be positive!")
+            return
+        if start_addr + length >= C_LENGTH_WAVEFORM:
+            self.logger.error("Start address + length must be less than 4096!")
+            return
+        if bool(start_addr % 2):
+            self.logger.error("Start address must be even!")
+            return
+        values = []
+        for i in range(start_addr, start_addr + length - 1, 2):
+            bot, top = self.read_waves(i)
+            values.append(bot)
+            values.append(top)
+        # If the length of the values is odd, read the last value
+        if length % 2:
+            values.append(self.read_waves(start_addr + length - 1)[0])
+        return values
 
     def entry_pulse_defn(self,
                         n_entry: int,

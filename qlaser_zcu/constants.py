@@ -3,6 +3,7 @@ UART_BAUD_DEFAULT = 115200
 UART_DESCIP_KWD = "Interface 0"  # Keyword to search for UART interface
 
 # Pulse Channel constants
+C_LENGTH_WAVEFORM = 4096  # Number of output data values from waveform RAM (4kx16-bit)
 C_BITS_ADC = 12
 C_BITS_ADDR_WAVE = 16
 C_BITS_GAIN_FACTOR = 16
