@@ -5,15 +5,8 @@ from serial.serialutil import SerialException
 from typing import TypedDict
 from loguru import logger
 
-# C_BITS_ADC = 12
-# C_BITS_ADDR_WAVE = 16
-# C_BITS_GAIN_FACTOR = 16
-# C_BITS_TIME_FACTOR = 16
-# C_MAX_CHANNELS = 32
-# C_ERR_BITS = 8
-# BIT_FRAC = 8
-# BIT_FRAC_GAIN = C_BITS_GAIN_FACTOR - 1
-# PULSE_START_MIN = 4  # Minimum start time for pulse
+class VersionsMismatchException(Exception):
+    """Exception raised when versions do not match"""
 
 class PulseConfig(TypedDict):
     start_time: int
@@ -26,12 +19,13 @@ class PulseConfig(TypedDict):
 
 class QlaserFPGA:
     """Class to interact with the ZCU FPGA over serial port"""
-    def __init__(self, portname : str=None, baudrate: int=115200):
+    def __init__(self, portname : str=None, baudrate: int=115200, reset=True):
         """Interact with the ZCU FPGA over serial port
 
         Args:
             portname (str, optional): Serial port to FPGA. Defaults to None to automatically select.
             baudrate (int, optional): Baudrate of the serial interface. Defaults to 115200.
+            reset (bool, optional): Soft reset values in the FPGA into known states. Defaults to True.
 
         Raises:
             SerialException: No valid UART COM port found or given
@@ -65,23 +59,50 @@ class QlaserFPGA:
         else:
             raise SerialException("No ports found or given!")
         
+        # check version
+        self.vers = ", ".join(self.versions())
+        if not (FPGA_VERSION in self.vers and FIRMWARE_VERSION in self.vers):
+            self.logger.error(f"Version integrity check failed!\nExpected FPGA: {FPGA_VERSION}, Firmware: {FIRMWARE_VERSION}\nFound: {self.vers}")
+            raise VersionsMismatchException((f"\n!!!Versions Mismatch! Please reload the bitsteam!!!\n!!!Incorrect version will result wrong bahavior!!!"))
+        
         # Turn off command echo
-        self.ser.write('0e'.encode('utf-8'))
+        self.ser.write('0'.encode('utf-8') + CMD_ECHO)
+        
+        if reset:
+            self.reset(flush_type="debug")
         
     
-    def print_all(self, errors: str = "ignore", type="info"):
+    def print_all(self, errors: str = "ignore", type="debug"):
         """Read and print all data from the serial port
 
         Args:
             errors (str, optional): How errors are handled when decoding the serial message. Defaults to "ignore".
-            type (str, optional): Type of log message. Either "info" or "debug". Defaults to "info".
+            type (str, optional): Type of log message. Either "info" or "debug". Defaults to "debug".
         """
         while True:
             data = self.ser.readline()
             if not data:
                 break
-            # logger.info(data.decode('utf-8', errors=errors))
-            eval(f"self.logger.{type}")(data.decode('utf-8', errors=errors))
+            msg = data.decode('utf-8', errors=errors).strip()
+            if CMD_ERR_MSG in msg:
+                self.logger.error(msg)
+            else:
+                eval(f"self.logger.{type}")(msg)
+
+    def versions(self) -> list[str]:
+        """Read and print all versions from the serial port
+
+        Returns:
+            list[str]: List of all versions
+        """
+        self.ser.write(CMD_VERSIONS)
+        dumps = []
+        data = self.ser.readlines()
+        if not data:
+            self.logger.error("No data received! Please make sure the device is powered on and running valid bitstream.")
+        for i in data:
+            dumps.append(i.decode('utf-8', errors="replace").strip())
+        return dumps
 
     def reset(self, flush_type: str="debug"):
         """Soft reset data in the FPGA and reset pulse entry counter to 0
@@ -107,12 +128,10 @@ class QlaserFPGA:
             Write 0x1234 to address 0x5678 in the pulse definition RAM (cmd = 0x8A)
             >>> xil_out32(0x5678, 0x1234, 0x8A)
         """
-        self.ser.write(str(data).encode('utf-8') + CMD_SET_DATA)
-        self.print_all() # flush the buffer0
-        
+        self.ser.write(str(data).encode('utf-8') + CMD_SET_DATA)        
         # Then, send the address to the PD ram
         self.ser.write(str(addr).encode('utf-8') + bytes([cmd]))
-        self.print_all() # flush the buffer
+        self.print_all(type="debug") # flush the buffer
     def __gpo_rd(self, format_spec="08x") -> str:
         """Read the general purpose output register
         
@@ -145,12 +164,13 @@ class QlaserFPGA:
         return dumps
     
     def read_errs(self) -> tuple[str, str]:
-        """Read the error registers.
+        """[DEPRECATED] Read the error registers.
         For now only Channel 1 and 2 are supported.
 
         Returns:
             tuple[str, str]: Error registers
         """
+        self.logger.warning(DeprecationWarning("This function is deprecated and will be removed with future hardware updates. Errors are part of read_regs() now."))
         err_lo = self.__gpo_rd()[-2:]
         err_hi = self.__gpo_rd()[-4:-2]
         

@@ -1,11 +1,8 @@
 import numpy as np
 from typing import Sequence
 from .qlaser_fpga import QlaserFPGA, PulseConfig
+from .constants import *
 from loguru import logger
-
-C_BITS_ADDR_WAVE = 12
-MAX_WAVES = 4096
-
 
 def poly_gen_numpy(
     degrees: int,
@@ -102,9 +99,7 @@ def load_waves(
     if not isinstance(definitions, list):
         definitions = [definitions]
     
-    fpga = QlaserFPGA(portname=port)
-    if reset:
-        fpga.reset(flush_type=flush_type)
+    fpga = QlaserFPGA(portname=port, reset=reset)
     
     fpga.sel_pulse(seq_length)
     fpga.sel_channel(channel)
@@ -146,3 +141,34 @@ def load_waves(
     fpga.print_all(type=flush_type)  # flush output
     if trigger:
         fpga.pulse_trigger()
+
+
+def vdac_to_hex(voltage, vref=VOLTAGE_REF, vref_type=VREF_INTERNAL):
+
+    # Limit input to be between zero and the reference voltage
+    if ((vref_type == VREF_INTERNAL) and (voltage > (2.0 * vref))):
+        print('Limiting max voltage to 2x internal vref: ' + str(2.0*vref))
+        voltage = 2.0 * vref
+
+    elif (vref_type == VREF_EXTERNAL) and (voltage > vref) :
+        print('Limiting max voltage to ext ref : ' + str(vref))
+        voltage = vref
+
+    elif (voltage < 0) :
+        print('Limiting min voltage to : 0.0')
+        voltage = 0
+        
+    # Convert voltage to DAC setting
+    if (vref_type == 'internal'):
+        step = 2.0 * vref / (2.0 ** DAC_BITS_RES)
+    else:
+        step = vref / (2.0 ** DAC_BITS_RES)
+
+    # Make DAC code
+    dac_code = int(voltage/step)
+
+    if (dac_code > (2** DAC_BITS_RES) - 1): 
+        dac_code = (2**DAC_BITS_RES) - 1
+        print('Limiting max dac_code to : ' + hex(dac_code))
+
+    return dac_code

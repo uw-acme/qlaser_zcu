@@ -2,9 +2,20 @@
 UART_BAUD_DEFAULT = 115200
 UART_DESCIP_KWD = "Interface 0"  # Keyword to search for UART interface
 
+FPGA_VERSION = "3AC10001"  #FPGA version
+FIRMWARE_VERSION = "1.0.i"  # Firmware version
+
+# DC constants
+VREF_INTERNAL = "internal"
+VREF_EXTERNAL = "external"
+VREF_TYPE     = VREF_INTERNAL   # or 'external'
+VOLTAGE_REF   = 1.25
+
+# Configuration
+DAC_BITS_RES  = 12
+
 # Pulse Channel constants
 C_LENGTH_WAVEFORM = 4096  # Number of output data values from waveform RAM (4kx16-bit)
-C_BITS_ADC = 12
 C_BITS_ADDR_WAVE = 16
 C_BITS_GAIN_FACTOR = 16
 C_BITS_TIME_FACTOR = 16
@@ -26,6 +37,7 @@ NUM_CHAN_DC   = 16
 NUM_CHAN_AC   =  4
 
 # Commands
+CMD_VERSIONS = b'v'  # Get versions
 CMD_REG_DUMP = b'P'  # Dump registers
 CMD_ECHO = b'e'  # Echo command
 CMD_RESET = b'\x52'  # Reset FPGA
@@ -41,3 +53,5 @@ CMD_WAVERAM_RD = b'\xBA'  # Read from wave RAM
 CMD_PDEFN_RD = b'\xAA'  # Read from pulse definition
 CMD_SET_DATA = b'\xDD'  # Set data to send
 CMD_DC_WR = b'\x8D'  # Write to DC channel
+
+CMD_ERR_MSG = "*E"  # Error message from firmware
