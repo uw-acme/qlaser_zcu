@@ -143,20 +143,29 @@ def load_waves(
         fpga.pulse_trigger()
 
 
-def vdac_to_hex(voltage, vref=VOLTAGE_REF, vref_type=VREF_INTERNAL):
+def vdac_to_hex(voltage: float, vref: float = VOLTAGE_REF, vref_type: str = VREF_INTERNAL) -> int:
+    """Convert voltage to DAC code
 
+    Args:
+        voltage (float): Voltage to convert
+        vref (float, optional): Reference voltage. Defaults to `VOLTAGE_REF`.
+        vref_type (str, optional): Reference voltage type. Defaults to `VREF_INTERNAL`.
+
+    Returns:
+        int: DAC value
+    """
     # Limit input to be between zero and the reference voltage
     if ((vref_type == VREF_INTERNAL) and (voltage > (2.0 * vref))):
-        print('Limiting max voltage to 2x internal vref: ' + str(2.0*vref))
+        logger.warning('Limiting max voltage to 2x internal vref: ' + str(2.0*vref))
         voltage = 2.0 * vref
 
     elif (vref_type == VREF_EXTERNAL) and (voltage > vref) :
-        print('Limiting max voltage to ext ref : ' + str(vref))
+        logger.warning('Limiting max voltage to ext ref : ' + str(vref))
         voltage = vref
 
     elif (voltage < 0) :
-        print('Limiting min voltage to : 0.0')
-        voltage = 0
+        logger.warning('Limiting min voltage to : 0.0')
+        voltage = 0.0
         
     # Convert voltage to DAC setting
     if (vref_type == 'internal'):
@@ -169,6 +178,6 @@ def vdac_to_hex(voltage, vref=VOLTAGE_REF, vref_type=VREF_INTERNAL):
 
     if (dac_code > (2** DAC_BITS_RES) - 1): 
         dac_code = (2**DAC_BITS_RES) - 1
-        print('Limiting max dac_code to : ' + hex(dac_code))
+        logger.warning('Limiting max dac_code to : ' + hex(dac_code))
 
     return dac_code

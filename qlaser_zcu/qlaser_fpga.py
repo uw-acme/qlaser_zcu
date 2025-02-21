@@ -176,13 +176,21 @@ class QlaserFPGA:
         
         return format(int(err_hi, 16), f"0{C_ERR_BITS}b"), format(int(err_lo, 16), f"0{C_ERR_BITS}b")
 
-    def pulse_trigger(self, flush_type: str = "debug") -> None:
-        """Tell FPGA to start the pulse sequence
+    def pulse_trigger(self, flush_type: str = "debug", trigger_mode: str = "contiuous") -> None:
+        """Tell FPGA to start the pulse sequence. Either triggering once or continuously.
         
         Args:
             flush_type (str, optional): Type of log message. Either "info" or "debug". Defaults to "debug".
+            trigger_mode (str, optional): Trigger mode. Either "contiuous" or "once". Defaults to "contiuous".
         """
-        self.ser.write(b't')
+        # raise error if trigger_mode is not valid
+        if trigger_mode == "contiuous":
+            self.ser.write(b't')
+        elif trigger_mode == "once":
+            self.ser.write(CMD_PULSE_TRIG)
+        else:
+            self.logger.error(f"Invalid trigger mode: {trigger_mode}. Valid options are 'contiuous' or 'once'")
+            return
         self.logger.debug("Sent trigger command to FPGA")
         self.print_all(type=flush_type)
 
@@ -284,6 +292,8 @@ class QlaserFPGA:
             tuple[int, int]: Two 16-bit values read from the wave table. First one is the bottom 16 bits, second one is the top 16 bits.
         """
         addr32 = addr // 2
+        if bool(addr % 2):
+            self.logger.warning(f"Address {addr} is not even. Values may not be read correctly!")
         self.ser.write(str(addr32).encode('utf-8') + CMD_WAVERAM_RD)
         data = self.ser.readline().decode('utf-8', errors="replace").strip()
         return int(data) & 0xFFFF, int(data) >> 16
@@ -302,7 +312,7 @@ class QlaserFPGA:
             self.logger.error("Start address and length must be positive!")
             return
         if start_addr + length >= C_LENGTH_WAVEFORM:
-            self.logger.error("Start address + length must be less than 4096!")
+            self.logger.error(f"Start address + length must be less than {C_LENGTH_WAVEFORM}!")
             return
         if bool(start_addr % 2):
             self.logger.error("Start address must be even!")
@@ -319,7 +329,7 @@ class QlaserFPGA:
 
     def entry_pulse_defn(self,
                         n_entry: int,
-                        n_start_time: int,  # minimum is 4
+                        n_start_time: int,  # minimum is 5
                         n_wave_addr: int,
                         n_wave_len: int,
                         n_scale_gain: float,
