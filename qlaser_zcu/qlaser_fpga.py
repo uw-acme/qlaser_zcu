@@ -9,18 +9,18 @@ class VersionsMismatchException(Exception):
     """Exception raised when versions do not match"""
 
 class PulseConfig(TypedDict):
-    start_time: int
-    start_addr: int
-    wave_len: int
-    scale_gain: float
-    scale_addr: float
-    sustain: int
-    coefficents: list[int]
+    """Pulse configuration
+    """
+    start_time: int  # start time of the pulse
+    start_addr: int  # wavefrom table start address of the pulse
+    wave_len: int  # size of the rise/fall
+    scale_gain: float  # amplitude scaling factor
+    scale_addr: float  # time step size
+    sustain: int  # sustain time
+    coefficents: list[int]  # polynomial coefficients
 
 class QlaserFPGA:
-    """Class to interact with the ZCU FPGA over serial port"""
-    def __init__(self, portname : str=None, baudrate: int=115200, reset=True):
-        """Interact with the ZCU FPGA over serial port
+    """Class to interact with the ZCU FPGA over serial port
 
         Args:
             portname (str, optional): Serial port to FPGA. Defaults to None to automatically select.
@@ -30,6 +30,7 @@ class QlaserFPGA:
         Raises:
             SerialException: No valid UART COM port found or given
         """
+    def __init__(self, portname : str=None, baudrate: int=115200, reset=True):
         self.logger = logger
                 
         comlist = (list(serial.tools.list_ports.comports()))
@@ -230,7 +231,7 @@ class QlaserFPGA:
         """Write a value to DC channel
 
         Args:
-            ch (int): Channel to write to. `C_MAX_CHANNELS`-1 total. Zero-indexed.
+            ch (int): Channel to write to. 32 total. Zero-indexed.
             value (int): Value to write for selected channel
         """
         if ch >= C_MAX_CHANNELS or ch < 0:
@@ -341,11 +342,12 @@ class QlaserFPGA:
 
         Args:
             n_entry (int): Nth pulse entry. This value should and only be incremented by 1 every time this function is called.
-            n_start_time (int): Starting time of the pulse. There need to be at least 4 time units before each pulse starts.
+            n_start_time (int): Starting time of the pulse. There need to be at least 5 time units before each pulse starts.
+            n_wave_addr (int): Starting address of the waveform table. Also known as "start address".
             n_wave_len (int): Duration of the rise of the pulse, unscaled.
-            n_scale_gain (float): Amplitude scaling factor of the pulse. This value should always be any decimals between (0, 1].
-            n_scale_addr (float): Time scale factor of the pulse. This value should always be any decimals between [1, wave_len).
-            n_flattop (int): Sustain duration (whatever stays flat between rise and fall) of the pulse.
+            n_scale_gain (float): Amplitude scaling factor of the pulse. This value should always be any decimals between (0, 1]. Also known as "gain factor".
+            n_scale_addr (float): Time scale factor of the pulse. This value should always be any decimals between [1, wave_len). Also known as "time step size" or "time factor".
+            n_flattop (int): Sustain duration (whatever stays flat between rise and fall) of the pulse. Also known as "sustain"
         """
         n_scale_gain = int(n_scale_gain * 2**BIT_FRAC_GAIN)
         n_scale_addr = int(n_scale_addr * 2**BIT_FRAC)
