@@ -13,14 +13,10 @@ Then, you can use the package by importing it in your Python code. For exmaple:
 
     import sys
     from qlaser_zcu.genwave import load_waves
-    from loguru import logger
+    from loguru import logger  # a nice logging for debugging and development purpose
 
-    # Setup log
-    logger.remove()
-    logger.add(sys.stdout, level="DEBUG", format="[{time:HH:mm:ss} {level}]: <{file}:{line}> {message}")
-
-    # Define the wave parameters (mostly for the first wave)
-    start_time = 4
+    # Define the wave parameters. You may need to keep track of this to avoid conflicts
+    start_time = 5
     start_addr = 0
     size = 180
     sustain = size*2

@@ -1,5 +1,6 @@
 import serial
 import serial.tools.list_ports
+import json
 from .constants import *
 from serial.serialutil import SerialException
 from typing import TypedDict
@@ -164,18 +165,21 @@ class QlaserFPGA:
             dumps.append(i.decode('utf-8', errors="replace").strip())
         return dumps
     
-    def read_errs(self) -> tuple[str, str]:
-        """[DEPRECATED] Read the error registers.
-        For now only Channel 1 and 2 are supported.
-
-        Returns:
-            tuple[str, str]: Error registers
+    def read_errs(self) -> None:
+        """Check channel errors. Print error message if any.
         """
-        self.logger.warning(DeprecationWarning("This function is deprecated and will be removed with future hardware updates. Errors are part of read_regs() now."))
-        err_lo = self.__gpo_rd()[-2:]
-        err_hi = self.__gpo_rd()[-4:-2]
-        
-        return format(int(err_hi, 16), f"0{C_ERR_BITS}b"), format(int(err_lo, 16), f"0{C_ERR_BITS}b")
+        self.print_all(type="debug")  # clear the buffer
+        self.ser.write(CMD_CH_ERR)
+        erros = json.loads(self.ser.readline().decode('utf-8', errors="replace").strip())
+        for k, v in erros.items():
+            erro_type = k
+            erro_chan = bin(v)[2:].zfill(C_MAX_CHANNELS)
+    
+            for j, char in enumerate(erro_chan):
+                if char == '1':
+                    logger.error(f"Found {erro_type} violation on channel {C_MAX_CHANNELS - j - 1}")
+            else:
+                logger.debug(f"No {erro_type} violations found on any channel")
 
     def pulse_trigger(self, flush_type: str = "debug", trigger_mode: str = "contiuous") -> None:
         """Tell FPGA to start the pulse sequence. Either triggering once or continuously.
@@ -218,7 +222,7 @@ class QlaserFPGA:
         self.ser.write(f'{channel}'.encode('utf-8') + CMD_PULSE_CHSEL + CMD_PULSE_CHEN)
         
     def chan_sel(self, channel: int) -> None:
-        """Select a channel to configure
+        """Select a channel to configure. Note on the physical hardware there are four PMOD DACs, with each has eight channels (channel A-H), totalling 32 channels.
 
         Args:
             channel (int): Channel to configure
@@ -226,6 +230,7 @@ class QlaserFPGA:
         if channel > C_MAX_CHANNELS or channel < 1:
             raise ValueError(f"Channel {channel} is out of range")
         self.ser.write(f'{channel}'.encode('utf-8') + CMD_PULSE_CHSEL)
+        self.print_all(type="debug")  # flush out serial buffer
         
     def write_dc_chan(self, ch: int, value: int) -> None:
         """Write a value to DC channel
@@ -307,7 +312,7 @@ class QlaserFPGA:
             length (int): Number of values to read
         
         Returns:
-            list[int]: List of values read from the wave table
+            list[int]: List of raw values read from the wave table
         """
         if start_addr < 0 or length < 0:
             self.logger.error("Start address and length must be positive!")

@@ -55,7 +55,7 @@ Glossary Terms
     Starting time of the pulse. There need to be at least 5 time units before each pulse starts.
 
   start address
-    The address in the waveform table RAM where the base value of the rise of the waveform is stored.
+    The address or location in the waveform table RAM where the base value of the rise of the waveform is stored.
 
   wave length
     Duration of the rise of the pulse.
@@ -67,4 +67,4 @@ Glossary Terms
     Step size of the pulse. Defines how much the address of the wavefrom table should be increment/decrement. This value should always be any decimals between [1, wave_len).
 
   sustain
-    Sustain duration (whatever stays flat between rise and fall) of the pulse.
+    Sustain duration (whatever stays flat between rise and fall) of the pulse. 

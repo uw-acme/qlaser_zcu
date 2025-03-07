@@ -11,9 +11,6 @@ VREF_EXTERNAL = "external"
 VREF_TYPE     = VREF_INTERNAL   # or 'external'
 VOLTAGE_REF   = 1.25
 
-# Configuration
-DAC_BITS_RES  = 12
-
 # Pulse Channel constants
 C_LENGTH_WAVEFORM = 4096  # Number of output data values from waveform RAM (4kx16-bit)
 C_BITS_ADDR_WAVE = 16
@@ -33,6 +30,7 @@ VOLTAGE_REF   = 1.25
 
 # Configuration
 DAC_BITS_RES  = 12
+FMC_BITS_RES  = 16
 NUM_CHAN_DC   = 16
 NUM_CHAN_AC   =  4
 
@@ -53,5 +51,6 @@ CMD_WAVERAM_RD = b'\xBA'  # Read from wave RAM
 CMD_PDEFN_RD = b'\xAA'  # Read from pulse definition
 CMD_SET_DATA = b'\xDD'  # Set data to send
 CMD_DC_WR = b'\x8D'  # Write to DC channel
+CMD_CH_ERR = b'\xAE'  # Get channel errors
 
 CMD_ERR_MSG = "*E"  # Error message from firmware

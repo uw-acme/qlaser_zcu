@@ -9,7 +9,7 @@ def poly_gen_numpy(
     time: float, 
     coeff: list
 ) -> float:
-    """Numpy vectorized version of polynomial generator
+    """Numpy vectorized version of polynomial generator. Helper function for `load_waves`
 
     Args:
         degrees (int): Degree of polynomial
@@ -22,7 +22,8 @@ def poly_gen_numpy(
     powers = np.arange(1, degrees + 1)
     poly_sum = np.sum(np.array(coeff, dtype=np.float64) * (time ** powers))
     
-    return (poly_sum / (degrees + 1)) * (2 ** (C_BITS_ADDR_WAVE - 1))
+    # TODO: Change to FMC_BITS_RES when JESD is there... right now using the PMOD DAC
+    return (poly_sum / (degrees + 1)) * (2 ** (DAC_BITS_RES - 1))
 
 def calculate_pulse_value(
     current_time: int,
@@ -90,9 +91,9 @@ def load_waves(
         seq_length (int): Total duation to run for all channels
         port (str | None, optional): Port to connect to FPGA. Defaults to None to auto-detect.
         channel (int | None, optional): Channel to load the wave(s) into. Defaults to None to select all channels.
-        time_type (str, optional): Time type to use for wave definitions. Either "relative" for timing related to start of each pulse or "absolute" for exact start time. Defaults to "relative".
-        reset (bool, optional): oft reset values in the FPGA into known states. Defaults to True.
-        flush_type (str, optional): FPGA seral output to log type. Defaults to "debug".
+        time_type (str, optional): Either "relative" for timing related to start of each pulse or "absolute" for exact start time. Defaults to "relative".
+        reset (bool, optional): clear and reset values in the FPGA into known states. Defaults to True.
+        flush_type (str, optional): FPGA seral output to log type. Either "info" or "debug". Defaults to "debug". 
         trigger (bool, optional): Trigger the wave(s) after loading. Defaults to False.
     """
     # Make sure definitions param is a list
@@ -102,7 +103,7 @@ def load_waves(
     fpga = QlaserFPGA(portname=port, reset=reset)
     
     fpga.sel_pulse(seq_length)
-    fpga.sel_channel(channel)
+    fpga.chan_sel(channel)
     fpga.print_all(type=flush_type)
     
     for entry in range(len(definitions)):
@@ -110,6 +111,12 @@ def load_waves(
         # Make sure entry start address is even
         if definitions[entry]["start_addr"] % 2 != 0:
             logger.error(f"Entry {entry} start address is not even. It may not work correctly.")
+            
+        # Check overlapping
+        end_addr_last = definitions[entry - 1]["start_addr"] + definitions[entry - 1]["wave_len"]
+        if entry > 0 and definitions[entry]["start_addr"] < end_addr_last and definitions[entry]["start_addr"] >= definitions[entry + 1]["start_addr"]:
+            logger.error(f"Entry {entry} overlaps with previous entry... skpped")
+            continue
         
         if time_type == "relative" and entry > 0:
             start_time = definitions[entry - 1]["start_time"] + 2 * definitions[entry - 1]["wave_len"] + definitions[entry - 1]["sustain"] + definitions[entry]["start_time"]
@@ -140,11 +147,13 @@ def load_waves(
     
     fpga.print_all(type=flush_type)  # flush output
     if trigger:
+        # Enable the selected channel
+        fpga.sel_channel(channel)
         fpga.pulse_trigger()
 
 
 def vdac_to_hex(voltage: float, vref: float = VOLTAGE_REF, vref_type: str = VREF_INTERNAL) -> int:
-    """Convert voltage to DAC code
+    """Convert voltage to PMOD DAC code. Useful for setting DAC values for the "DC" voltages through the PMODs
 
     Args:
         voltage (float): Voltage to convert
