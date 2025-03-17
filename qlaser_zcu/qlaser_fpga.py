@@ -26,12 +26,11 @@ class QlaserFPGA:
         Args:
             portname (str, optional): Serial port to FPGA. Defaults to None to automatically select.
             baudrate (int, optional): Baudrate of the serial interface. Defaults to 115200.
-            reset (bool, optional): Soft reset values in the FPGA into known states. Defaults to True.
 
         Raises:
             SerialException: No valid UART COM port found or given
         """
-    def __init__(self, portname : str=None, baudrate: int=115200, reset=True):
+    def __init__(self, portname : str=None, baudrate: int=115200):
         self.logger = logger
                 
         comlist = (list(serial.tools.list_ports.comports()))
@@ -65,13 +64,13 @@ class QlaserFPGA:
         self.vers = ", ".join(self.versions())
         if not (FPGA_VERSION in self.vers and FIRMWARE_VERSION in self.vers):
             self.logger.error(f"Version integrity check failed!\nExpected FPGA: {FPGA_VERSION}, Firmware: {FIRMWARE_VERSION}\nFound: {self.vers}")
-            raise VersionsMismatchException((f"\n!!!Versions Mismatch! Please reload the bitsteam!!!\n!!!Incorrect version will result wrong bahavior!!!"))
+            if not self.vers:
+                raise SerialException("No valid firmware found on FPGA or FPGA is not powered on!")
+            else:
+                raise VersionsMismatchException((f"\n!!!Versions Mismatch! Please reload the bitsteam!!!\n!!!Incorrect version will result wrong bahavior!!!"))
         
         # Turn off command echo
         self.ser.write('0'.encode('utf-8') + CMD_ECHO)
-        
-        if reset:
-            self.reset(flush_type="debug")
         
     
     def print_all(self, errors: str = "ignore", type="debug"):
@@ -118,39 +117,43 @@ class QlaserFPGA:
         self.print_all(type=flush_type)  # Clear the buffer
         
         
-    def xil_out32(self, addr: int, data: int, cmd: int) -> None:
-        """Mimic Xil_Out32(addr, value) from the original C code. A generic write to FPGA function.
+    def xil_out32(self, addr: int, data: int, cmd: int | bytes) -> None:
+        """Mimic Xil_Out32(addr, value) from the original C code but for specific block. 
+        A generic write to a FPGA's memory location by writing 32-bit data and 16-bit address with a block-specific command.
 
         Args:
             addr (int): Address to write to
             data (int): Data to write
-            cmd (int): Write operation command, in hex format.
+            cmd (int): Write operation command, in hex format. This specifies the block to write to.
             
         Examples:
             Write 0x1234 to address 0x5678 in the pulse definition RAM (cmd = 0x8A)
             >>> xil_out32(0x5678, 0x1234, 0x8A)
         """
-        self.ser.write(str(data).encode('utf-8') + CMD_SET_DATA)        
-        # Then, send the address to the PD ram
-        self.ser.write(str(addr).encode('utf-8') + bytes([cmd]))
-        self.print_all(type="debug") # flush the buffer
-    def __gpo_rd(self, format_spec="08x") -> str:
-        """Read the general purpose output register
+
+        if type(cmd) == int:
+            cmd = bytes([cmd])
+            
+        self.ser.write(str(((addr & 0xFFFF) << 32) | (data & 0xFFFFFFFF)).encode('utf-8') + cmd)
         
-        Used (almost) internally only
-
+    def xil_in32(self, addr: int, cmd: int | bytes) -> int:
+        """Mimic Xil_In32(addr) from the original C code but for specific block. 
+        A generic read from a a FPGA's memory location by writing 16-bit address with a block-specific command and reading 32-bit data.
+        
         Args:
-            format_spec (str, optional): String format to be output. Defaults to "08x".
-
+            addr (int): Address to read from
+            cmd (int): Read operation command, in hex format. This specifies the block to read from.
+        
         Returns:
-            str: Value of the general purpose output register
+            int: Data read from the address
         """
-        self.print_all(type="debug")  # Clear the buffer
-        self.ser.write(CMD_GPIO_RD)
-        # This command is also used for real-time serial debug, with format of <some string message>: 0x<value>
-        # Strip it to get the value
-        data = self.ser.readline().decode('utf-8', errors="replace").strip().split("0x")
-        return format(int(data[1], 16), format_spec)
+        
+        if type(cmd) == int:
+            cmd = bytes([cmd])
+        
+        self.ser.write(str(addr).encode('utf-8') + cmd)
+        data = self.ser.readline().decode('utf-8', errors="replace").strip()
+        return int(data)
     
     def read_regs(self) -> list[str]:
         """Read and print all registers
@@ -171,6 +174,7 @@ class QlaserFPGA:
         self.print_all(type="debug")  # clear the buffer
         self.ser.write(CMD_CH_ERR)
         erros = json.loads(self.ser.readline().decode('utf-8', errors="replace").strip())
+        cnt_err = 0
         for k, v in erros.items():
             erro_type = k
             erro_chan = bin(v)[2:].zfill(C_MAX_CHANNELS)
@@ -178,11 +182,14 @@ class QlaserFPGA:
             for j, char in enumerate(erro_chan):
                 if char == '1':
                     logger.error(f"Found {erro_type} violation on channel {C_MAX_CHANNELS - j - 1}")
-            else:
-                logger.debug(f"No {erro_type} violations found on any channel")
+                    cnt_err += 1
+        if cnt_err == 0:
+            logger.info("No channel errors found")
+        else:
+            logger.error(f"Found {cnt_err} channel errors")
 
     def pulse_trigger(self, flush_type: str = "debug", trigger_mode: str = "contiuous") -> None:
-        """Tell FPGA to start the pulse sequence. Either triggering once or continuously.
+        """[DEPRECATED] Tell FPGA to start the pulse sequence. Either triggering once or continuously.
         
         Args:
             flush_type (str, optional): Type of log message. Either "info" or "debug". Defaults to "debug".
@@ -249,11 +256,54 @@ class QlaserFPGA:
         # Format address
         addr = (spi << 3) + dac_channel
         
-        self.ser.write(str(value).encode('utf-8') + CMD_SET_DATA)
-        self.ser.write(str(addr).encode('utf-8') + CMD_DC_WR)
+        self.xil_out32(addr, value, CMD_DC_WR)
         
         self.print_all(type="debug")
         
+    # TODO: enforce only one channel being selected?
+    def read_waves(self, addr: int) -> tuple[int, int]:
+        """Read a pair of values from the wave table with a even-numbered start address
+
+        Args:
+            addr (int): Starting address of the wave table the data should be read from.
+        
+        Returns:
+            tuple[int, int]: Two 16-bit values read from the wave table. First one is the bottom 16 bits, second one is the top 16 bits.
+        """
+        addr32 = addr // 2
+        if bool(addr % 2):
+            self.logger.warning(f"Address {addr} is not even. Values may not be read correctly!")
+        data = self.xil_in32(addr32, CMD_WAVERAM_RD)
+        return int(data) & 0xFFFF, int(data) >> 16
+    
+    def read_wave_table(self, start_addr: int, length: int) -> list[int]:
+        """Read a list of values from the wave table starting at the given even-numbered address.
+
+        Args:
+            start_addr (int): Starting address of the wave table
+            length (int): Number of values to read
+        
+        Returns:
+            list[int]: List of raw values read from the wave table
+        """
+        if start_addr < 0 or length < 0:
+            self.logger.error("Start address and length must be positive!")
+            return
+        if start_addr + length >= C_LENGTH_WAVEFORM:
+            self.logger.error(f"Start address + length must be less than {C_LENGTH_WAVEFORM}!")
+            return
+        if bool(start_addr % 2):
+            self.logger.error("Start address must be even!")
+            return
+        values = []
+        for i in range(start_addr, start_addr + length - 1, 2):
+            bot, top = self.read_waves(i)
+            values.append(bot)
+            values.append(top)
+        # If the length of the values is odd, read the last value
+        if length % 2:
+            values.append(self.read_waves(start_addr + length - 1)[0])
+        return values
         
     def write_wave_table(self, start_addr: int, values: list[int]) -> None:
         """Write a list of values pairs to the wave table starting at the given even-numbered address.
@@ -285,53 +335,8 @@ class QlaserFPGA:
         addr32 = addr // 2
         if bool(addr % 2):
             self.logger.warning(f"Address {addr} is not even. Values may not be written correctly!")
-        self.ser.write(str(val16_up * 2**C_BITS_ADDR_WAVE + val16_lo).encode('utf-8') + CMD_SET_DATA)
-        self.ser.write(str(addr32).encode('utf-8') + CMD_WAVERAM_WR)
-        
-    def read_waves(self, addr: int) -> tuple[int, int]:
-        """Read a chunk/pair of values from the wave table with a even-numbered start address
 
-        Args:
-            addr (int): Starting address of the wave table the data should be read from.
-        
-        Returns:
-            tuple[int, int]: Two 16-bit values read from the wave table. First one is the bottom 16 bits, second one is the top 16 bits.
-        """
-        addr32 = addr // 2
-        if bool(addr % 2):
-            self.logger.warning(f"Address {addr} is not even. Values may not be read correctly!")
-        self.ser.write(str(addr32).encode('utf-8') + CMD_WAVERAM_RD)
-        data = self.ser.readline().decode('utf-8', errors="replace").strip()
-        return int(data) & 0xFFFF, int(data) >> 16
-    
-    def read_wave_table(self, start_addr: int, length: int) -> list[int]:
-        """Read a list of values from the wave table starting at the given even-numbered address.
-
-        Args:
-            start_addr (int): Starting address of the wave table
-            length (int): Number of values to read
-        
-        Returns:
-            list[int]: List of raw values read from the wave table
-        """
-        if start_addr < 0 or length < 0:
-            self.logger.error("Start address and length must be positive!")
-            return
-        if start_addr + length >= C_LENGTH_WAVEFORM:
-            self.logger.error(f"Start address + length must be less than {C_LENGTH_WAVEFORM}!")
-            return
-        if bool(start_addr % 2):
-            self.logger.error("Start address must be even!")
-            return
-        values = []
-        for i in range(start_addr, start_addr + length - 1, 2):
-            bot, top = self.read_waves(i)
-            values.append(bot)
-            values.append(top)
-        # If the length of the values is odd, read the last value
-        if length % 2:
-            values.append(self.read_waves(start_addr + length - 1)[0])
-        return values
+        self.xil_out32(addr32, val16_up * 2**C_BITS_ADDR_WAVE + val16_lo, CMD_WAVERAM_WR)
 
     def entry_pulse_defn(self,
                         n_entry: int,
@@ -391,24 +396,20 @@ class QlaserFPGA:
         # 1) Write the Start Time
         n_wdata = n_start_time & 0x00FFFFFF
         n_waddr = 4 * n_entry  # offset calculation
-        self.ser.write(str(n_wdata).encode('utf-8') + CMD_SET_DATA)
-        self.ser.write(str(n_waddr).encode('utf-8') + CMD_PDEFN_WR)
+        self.xil_out32(n_waddr, n_wdata, CMD_PDEFN_WR)
 
         # 2) Write the Wave Length and Wave Address
         n_wdata = ((n_wave_len & 0x0FFF) << 16) | (n_wave_addr & 0x0FFF)
         n_waddr += 1
-        self.ser.write(str(n_wdata).encode('utf-8') + CMD_SET_DATA)
-        self.ser.write(str(n_waddr).encode('utf-8') + CMD_PDEFN_WR)
+        self.xil_out32(n_waddr, n_wdata, CMD_PDEFN_WR)
 
         # 3) Write the Scale Gain and Scale Address
         n_wdata = ((n_scale_gain & 0xFFFF) << 16) | (n_scale_addr & 0xFFFF)
         n_waddr += 1
-        self.ser.write(str(n_wdata).encode('utf-8') + CMD_SET_DATA)
-        self.ser.write(str(n_waddr).encode('utf-8') + CMD_PDEFN_WR)
+        self.xil_out32(n_waddr, n_wdata, CMD_PDEFN_WR)
 
         # 4) Write the Flattop
         n_wdata = n_flattop & 0x0001FFFF
         n_waddr += 1
-        self.ser.write(str(n_wdata).encode('utf-8') + CMD_SET_DATA)
-        self.ser.write(str(n_waddr).encode('utf-8') + CMD_PDEFN_WR)
+        self.xil_out32(n_waddr, n_wdata, CMD_PDEFN_WR)
         
