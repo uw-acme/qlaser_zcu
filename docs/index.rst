@@ -13,6 +13,7 @@ Python package that interface with the NanoQ Laser hardware controller on an Xil
    :maxdepth: 2
 
    overview.rst
+   background.rst
 
 .. toctree::
    :caption: Getting Started

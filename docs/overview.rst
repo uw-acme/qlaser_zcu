@@ -11,6 +11,8 @@ The Qlaser-ZCU project consists of an :term:`FPGA` board (Xilinx ZCU102) that ge
 
 .. _overview_diagram:
 .. figure:: _static/diagrams/overview.jpg
+    :align: center
+    :width: 60%
 
     Overview of the hardware structure
 

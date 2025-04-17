@@ -30,8 +30,14 @@ Glossary Terms
   PMOD
     A small I/O module that can be plugged into a PMOD connector on a FPGA board. PMOD modules are used to add additional functionality to a FPGA board, such as digital-to-analog conversion and communication interfaces in this project.
 
+  FMC
+    FPGA Mezzanine Card. A standard for connecting high-speed I/O devices to a FPGA board. FMC connectors are used to connect high-speed DACs to the FPGA board in this project.
+
   SPI
     Serial Peripheral Interface. A synchronous serial communication interface that is used to communicate between the FPGA and external DACs.
+
+  UART
+    Universal Asynchronous Receiver-Transmitter. A hardware device that is used to communicate between the FPGA and a computer or other devices. UART is used to send and receive data between the FPGA and the processing system in this project. This is can be commonly found in USB cables conneting various devices.
 
   bitstream
     A file that contains the configuration data for an FPGA. The bitstream is loaded into the FPGA to configure it.
