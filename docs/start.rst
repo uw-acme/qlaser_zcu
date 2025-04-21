@@ -49,20 +49,20 @@ Then you may use the package to communicate with the FPGA and generate pulsed wa
             "wave_id": wave0,
             "start_time": 5,
             "scale_gain": 1.0,
-            "scale_addr": 1.0,
+            "scale_time": 1.0,
             "sustain": 5
         },
         {
             "wave_id": wave1,
             "start_time": 128,
             "scale_gain": 1.0,
-            "scale_addr": 1.0,
+            "scale_time": 1.0,
             "sustain": 5
         },{
             "wave_id": wave2,
             "start_time": 256,
             "scale_gain": 1.0,
-            "scale_addr": 1.0,
+            "scale_time": 1.0,
             "sustain": 5
         }
     ]

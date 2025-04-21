@@ -16,13 +16,13 @@ class PulseConfig(TypedDict):
         wave_id (int): Wave ID of the waveform. Can be calculated by wave_id = start_address + wave_length * 2^16
         start_time (int): Start time of the pulse. Minimum is 5.
         scale_gain (float): Amplitude scaling factor
-        scale_addr (float): Time step size
+        scale_time (float): Time step size
         sustain (int): Sustain time
     """
     wave_id:    int    # ID of the waveform. Can be calculated by wave_id = start_address + wave_length * 2^16
     start_time: int    # start time of the pulse
     scale_gain: float  # amplitude scaling factor
-    scale_addr: float  # time step size
+    scale_time: float  # time step size
     sustain:    int    # sustain time
 
 class QlaserFPGA:
@@ -359,14 +359,14 @@ class QlaserFPGA:
             if all(values[i+j].isdigit() for j in range(4)):
                 start_time = int(values[i]) & 0x00FFFFFF
                 scale_gain = ((int(values[i+2]) >> 16) & 0xFFFF) / 2**BIT_FRAC_GAIN
-                scale_addr = (int(values[i+2]) & 0xFFFF) / 2**BIT_FRAC
+                scale_time = (int(values[i+2]) & 0xFFFF) / 2**BIT_FRAC
                 sustain = int(values[i+3]) & 0x0001FFFF
 
                 configs.append(PulseConfig(
                     wave_id=int(values[i+1]),
                     start_time=start_time,
                     scale_gain=scale_gain,
-                    scale_addr=scale_addr,
+                    scale_time=scale_time,
                     sustain=sustain
                 ))
             
@@ -417,7 +417,7 @@ class QlaserFPGA:
                         n_wave: int,
                         n_start_time: int,  # minimum is 5
                         n_scale_gain: float,
-                        n_scale_addr: float,
+                        n_scale_time: float,
                         n_flattop: int,
                         n_entry: int | None = None) -> None:
         """Write pulse parameters to the FPGA.
@@ -428,7 +428,7 @@ class QlaserFPGA:
             n_wave (int): Wave ID of the waveform. Can be calculated by wave_id = start_address + wave_length * 2^16
             n_start_time (int): Start time of the pulse. Minimum is 5.
             n_scale_gain (float): Amplitude scaling factor
-            n_scale_addr (float): Time step size
+            n_scale_time (float): Time step size
             n_flattop (int): Sustain time
             n_entry (int | None, optional): Nth pulse entry. This value should and only be incremented by 1 every time this function is called. Defaults to None to auto allocate the next entry. Note that the automatic allocation will be slower than manually setting the entry, but it is more convenient.
         """
@@ -445,7 +445,7 @@ class QlaserFPGA:
                 n_entry = 0
         
         n_scale_gain = int(n_scale_gain * 2**BIT_FRAC_GAIN)
-        n_scale_addr = int(n_scale_addr * 2**BIT_FRAC)
+        n_scale_time = int(n_scale_time * 2**BIT_FRAC)
         
         # Check bounds
         if n_start_time > 0x00FFFFFF:
@@ -461,9 +461,9 @@ class QlaserFPGA:
             logger.warning(f"entry_pulse_defn({n_entry}): "
                 f"Scale Gain 0x{n_scale_gain:04X} > 0xFFFF")
 
-        if n_scale_addr > 0xFFFF:
+        if n_scale_time > 0xFFFF:
             logger.warning(f"entry_pulse_defn({n_entry}): "
-                f"Scale addr 0x{n_scale_addr:04X} > 0xFFFF")
+                f"Scale addr 0x{n_scale_time:04X} > 0xFFFF")
 
         if n_flattop > 0x0001FFFF:
             logger.warning(f"entry_pulse_defn({n_entry}): "
@@ -481,7 +481,7 @@ class QlaserFPGA:
         self.xil_out32(n_waddr, n_wdata, CMD_PDEFN_WR)
 
         # 3) Write the Scale Gain and Scale Address
-        n_wdata = ((n_scale_gain & 0xFFFF) << 16) | (n_scale_addr & 0xFFFF)
+        n_wdata = ((n_scale_gain & 0xFFFF) << 16) | (n_scale_time & 0xFFFF)
         n_waddr += 1
         self.xil_out32(n_waddr, n_wdata, CMD_PDEFN_WR)
 

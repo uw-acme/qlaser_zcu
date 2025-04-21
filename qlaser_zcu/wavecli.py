@@ -147,7 +147,7 @@ def set_defns(
             entry['wave_id'],
             entry['start_time'],
             entry['scale_gain'],
-            entry['scale_addr'],
+            entry['scale_time'],
             entry['sustain'],
             n_entry = i
         )
