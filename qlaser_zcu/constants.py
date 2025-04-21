@@ -38,6 +38,7 @@ CMD_VERSIONS    = b'v'  # Get versions
 CMD_REG_DUMP    = b'P'  # Dump registers
 CMD_ECHO        = b'e'  # Echo command
 CMD_RESET       = b'R'  # Reset FPGA
+CMD_MEM_CLR     = b'r'  # Clear memory
 CMD_PULSE_SEQ   = b's'  # Sequence trigger for AC pulse
 CMD_PULSE_CHEN  = b'C'  # Enable pulse channel
 CMD_PULSE_CHSEL = b'c'  # Select pulse channel

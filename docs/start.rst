@@ -32,6 +32,7 @@ Then connect all the peripherals to the ZCU102 board as described in :numref:`ov
 
 Then you may use the package to communicate with the FPGA and generate pulsed waveform. For example:
 
+.. _example:
 .. code-block:: python
 
     from qlaser_zcu.wavecli import *
@@ -71,11 +72,11 @@ Then you may use the package to communicate with the FPGA and generate pulsed wa
     enable_channels(0)
 
     # read back the pulse definitions
-    print(get_defns(0))
+    logger.info(get_defns(0))
     # read back the wave table
-    print(get_wave(wave0))
-    print(get_wave(wave1))
-    print(get_wave(wave2))
+    logger.info(get_wave(wave0))
+    logger.info(get_wave(wave1))
+    logger.info(get_wave(wave2))
 
     # additional ways to interfacte with the FPGA
     hw = QlaserFPGA()

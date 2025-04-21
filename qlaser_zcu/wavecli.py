@@ -15,7 +15,7 @@ def get_wave_ids() -> list[int]:
     return df.columns.astype(int).to_list() if not df.empty else []
 
 def get_wave(waveid: int, port: str | None = None) -> list[int]:
-    """Get a waveform from the database
+    """Get values of a waveform from the hardware with a known wave ID
 
     Args:
         waveid (int): Wave ID
@@ -69,11 +69,11 @@ def enable_channels(channels: list[int], port: str | None = None):
     QlaserFPGA(portname=port).chan_en(channels)
 
 def add_wave(values: list[int], keep_previous: bool = True, port: str | None = None) -> int:
-    """Load a wave into the FPGA
+    """Load a wave into the FPGA. Note that values must be DAC values between 0 and the maximum DAC value. Refer to your DAC's datasheet for voltage value to DAC value conversion.
 
     Args:
         values (list[int]): Wave values, must be in integers between 0 and maximum DAC value. Note that numpy integer types are not supported.
-        keep_previous (bool, optional): Keep previous wave table. Defaults to True.
+        keep_previous (bool, optional): Keep previous wave table. Set this to False will clear both the database and data in the hardware. Defaults to True.
         port (str | None, optional): Port to connect to FPGA. Defaults to None to auto-detect.
 
     Returns:
@@ -87,7 +87,7 @@ def add_wave(values: list[int], keep_previous: bool = True, port: str | None = N
     else:
         df = pd.DataFrame()
         logger.info("Clearing FPGA wave table")
-        fpga.clear_wave_table()
+        fpga.clear_wave_table(all_chan=True)
         last_id = 0
 
     start_addr = (last_id & 0xFFFF) + (last_id >> 16)
@@ -138,7 +138,7 @@ def set_defns(
     fpga.chan_sel(channel)
     
     logger.info(f"Clearing FPGA pulse definition memory on channel {channel}")
-    fpga.clear_ram_defn()
+    fpga.clear_ram_defn(all_chan=False)
     fpga.print_all(type=flush_type)
     
     for i, entry in enumerate(definitions):

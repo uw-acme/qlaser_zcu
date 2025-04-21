@@ -194,17 +194,6 @@ class QlaserFPGA:
         else:
             logger.error(f"Found {cnt_err} channel errors")
 
-    def pulse_trigger(self, flush_type: str = "debug", trigger_mode: str = "contiuous") -> None:
-        """**DEPRECATED** Tell FPGA to start the pulse sequence. Either triggering once or continuously.
-        
-        Args:
-            flush_type (str, optional): Type of log message. Either "info" or "debug". Defaults to "debug".
-            trigger_mode (str, optional): Trigger mode. Either "contiuous" or "once". Defaults to "contiuous".
-        """
-        self.ser.write(CMD_PULSE_TRIG)
-        self.logger.debug("Sent trigger command to FPGA")
-        self.print_all(type=flush_type)
-
     def set_seq(self, seq_length: int, flush_type: str = "debug", channel: int | None = None) -> None:
         """Set the pulse sequence length
 
@@ -501,18 +490,30 @@ class QlaserFPGA:
         n_waddr += 1
         self.xil_out32(n_waddr, n_wdata, CMD_PDEFN_WR)
         
-    def clear_ram_defn(self) -> None:
+    def clear_ram_defn(self, all_chan: bool = False) -> None:
         """Clear all pulse definitions in the FPGA
+        
+        Args:
+            all_chan (bool, optional): Clear all channels. Defaults to False.
         """
-        for i in range(C_NUM_WAVEFORM * 4):
-            self.xil_out32(i, 0, CMD_PDEFN_WR)
+        if all_chan:
+            self.logger.debug("Clearing all channel's pulse definitions in the FPGA.")
+            self.ser.write('99'.encode('utf-8') + CMD_PULSE_CHSEL)
+        
+        self.ser.write('0'.encode('utf-8') + CMD_MEM_CLR)
         self.print_all(type="debug")  # flush out serial buffer
         
-    def clear_wave_table(self) -> None:
+    def clear_wave_table(self, all_chan: bool = True) -> None:
         """Clear all waveforms in the FPGA
+
+        Args:
+            all_chan (bool, optional): Select all channels to clear. Defaults to True.
         """
-        for i in range(0, C_LENGTH_WAVEFORM, 2):
-            self.write_waves(i, 0, 0)
+        if all_chan:
+            self.logger.debug("Clearing all channel's waveforms in the FPGA.")
+            self.ser.write('99'.encode('utf-8') + CMD_PULSE_CHSEL)
+        
+        self.ser.write('1'.encode('utf-8') + CMD_MEM_CLR)
         self.print_all(type="debug")
             
     

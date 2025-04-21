@@ -25,7 +25,7 @@ Python package that interface with the NanoQ Laser hardware controller on an Xil
    :caption: System Components
    :maxdepth: 2
 
-   hardware.rst
+   system.rst
 
 .. toctree::
    :caption: API Reference

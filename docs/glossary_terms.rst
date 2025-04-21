@@ -61,10 +61,10 @@ Glossary Terms
     Starting time of the pulse. There need to be at least 5 time units before each pulse starts.
 
   start address
-    The address or location in the waveform table RAM where the base value of the rise of the waveform is stored.
+    The address or location in the waveform table RAM where the base value of the rise of the waveform is stored. This value can be managed by the package itself.
 
   wave length
-    Duration of the rise of the pulse.
+    Duration of the rise of the pulse. This value can be managed by the package itself.
 
   gain factor
     Amplitude scaling factor of the pulse. This value should always be any decimals between (0, 1].
