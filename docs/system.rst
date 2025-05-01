@@ -1,3 +1,5 @@
+System Components
+=================
 
 .. _hw_arch:
 
@@ -16,7 +18,7 @@ The processing system's ARM-based CPU converts Python-generated commands into ad
 DC Channel
 ----------------------
 
-As illustrated in the :numref:`overview_diagram`, the hardware has the capability to generate 32 static "DC" and 32 pulsed "AC" voltage. The DC voltage is outputted from four AD5268 DACs, with each capable of generating 8 channels (labled letter A-H shown in :numref:`pmod_top`). Note the value of this function is a raw value between 0 and 4095 for the DAC, and voltage depending on the DAC's reference voltage. Refer to page 22 of the DAC's `documentation <https://www.analog.com/media/en/technical-documentation/data-sheets/AD5628_5648_5668.pdf>`_ for detailed information. This value could be so set and sent to the DAC using :meth:`~qlaser_zcu.wavecli.vdac_to_hex` function, where a voltage value is converted to a raw value.
+As illustrated in the :numref:`overview_diagram`, the hardware has the capability to generate 32 static "DC" and 32 pulsed "AC" voltage. The DC voltage is outputted from four AD5268 DACs, with each capable of generating 8 channels (labled letter A-H shown in :numref:`pmod_top`). Note the value of this function is a raw value between 0 and 4095 for the DAC, and voltage depending on the DAC's reference voltage. Refer to page 22 of the DAC's `documentation <https://www.analog.com/media/en/technical-documentation/data-sheets/AD5628_5648_5668.pdf>`_ for detailed information. This value could be so set with :meth:`~qlaser_zcu.wavecli.vdac_to_hex` and sent to the DAC using :meth:`~qlaser_zcu.qlaser_fpga.QlaserFPGA.write_dc_chan` function.
 
 .. _pmod_top:
 .. figure:: _static/diagrams/pmod.png
@@ -37,11 +39,11 @@ The output of the waveform values are positive integers. The waveform is generat
 Software Control Interface
 --------------------------
 
-Thie packages is the high-level abstraction interface that translates user-defined waveform data and pulse parameters into hardware-compatible formats. This layer allows researchers to focus on designing and refining quantum control strategies, without needing in-depth knowledge of the hardware.
+this package is the high-level abstraction interface that translates user-defined waveform data and pulse parameters into hardware-compatible formats. This layer allows researchers to focus on designing and refining quantum control strategies, without needing in-depth knowledge of the hardware.
 
-The front-end interface :mod:`~qlaser_zcu.wavecli` functions like a lightweight API, capable of handling memory allocation and waveform registration. For each waveform, it determines the next available memory space, calculates the starting address and length, and assigns a unique waveform ID (See :meth:`~qlaser_zcu.wavecli.add_wave`). Inputs that exceed memory constraints are flagged with errors, and all waveform data is logged to a CSV file as a "receipt" for traceability. This file is stored under the ``data`` folder in the execution script's directory, with a file named ``waveform.csv``. The first row of the file contains all the waveform IDs, and the rest rows contains the corresponding waveforms values.
+The front-end interface :mod:`~qlaser_zcu.wavecli` functions like a lightweight API, capable of handling memory allocation and waveform registration. For each waveform, it determines the next available memory space, calculates the starting address and length, and assigns a unique waveform ID (See :meth:`~qlaser_zcu.wavecli.add_wave`). Inputs that exceed memory constraints are flagged with errors, and all waveform data is logged to a CSV file as a "receipt" for traceability. This file is stored under the ``data`` folder in the execution script's directory, with a file named ``waveform.csv``. The first row of the file contains all the waveform IDs, and the rest of rows contains the corresponding waveforms values.
 
 Pulse parameter management is similar with :meth:`~qlaser_zcu.wavecli.set_defns`. Each pulse is defined by a fixed group of four values—:term:`start time`, :term:`time factor`, :term:`gain factor`, and :term:`sustain` time—alongside the associated waveform ID. Using this ID, the interface retrieves the waveform's memory location and length, translating the entire entry into a format understood by the hardware. Similarly, there are "receipts" for pulse parameters **for each channels**. It is stored under the ``data`` folder in the execution script's directory, with a file named ``definitions_channel<channel number>.csv``. 
 
-After translation, the control values are passed over UART to the hardware using the ``pyserial`` library. The custom     :mod:`~qlaser_zcu.qlaser_fpga.QlaserFPGA()` class wraps this communication, ensuring reliable delivery and integration with precise hardware subroutines. The hardware then interprets the commands and activates specific logic blocks, maintaining accurate synchronization across the FPGA system. Top half part of :numref:`sys_diagram` illustrates the structure of the software control interface, which is responsible for managing the communication between the user and the hardware.
+After translation, the control values are passed over UART to the hardware using the ``pyserial`` library. The custom     :mod:`~qlaser_zcu.qlaser_fpga.QlaserFPGA` class wraps this communication, ensuring reliable delivery and integration with precise hardware subroutines. The hardware then interprets the commands and activates specific logic blocks, maintaining accurate synchronization across the FPGA system. Top half part of :numref:`sys_diagram` illustrates the structure of the software control interface, which is responsible for managing the communication between the user and the hardware.
 

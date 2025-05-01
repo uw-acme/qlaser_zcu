@@ -10,20 +10,20 @@ class VersionsMismatchException(Exception):
     """Exception raised when versions do not match"""
 
 class PulseConfig(TypedDict):
-    """Pulse configuration, a typed dictionary to store pulse parameters
+    """Pulse configuration, a typed dictionary to store pulse definitions
     
     Attributes:
-        wave_id (int): Wave ID of the waveform. Can be calculated by wave_id = start_address + wave_length * 2^16
-        start_time (int): Start time of the pulse. Minimum is 5.
-        scale_gain (float): Amplitude scaling factor
-        scale_time (float): Time step size
-        sustain (int): Sustain time
+        wave_id (int): Wave ID of a waveform. IDs can be found using :mod:`~qlaser_zcu.wavecli.get_wave_ids` or from the generated config file. This ID is calculated by wave_id = start_address + wave_length * 2^16
+        start_time (int): :term:`start time` of the pulse. Minimum is 50 ns.
+        scale_gain (float): :term:`gain factor`
+        scale_time (float): :term:`time factor`
+        sustain (int): :term:`sustain` time
     """
-    wave_id:    int    # ID of the waveform. Can be calculated by wave_id = start_address + wave_length * 2^16
-    start_time: int    # start time of the pulse
-    scale_gain: float  # amplitude scaling factor
-    scale_time: float  # time step size
-    sustain:    int    # sustain time
+    wave_id:    int
+    start_time: int
+    scale_gain: float
+    scale_time: float
+    sustain:    int
 
 class QlaserFPGA:
     """Core Class to interact with the ZCU FPGA over serial port
@@ -298,7 +298,7 @@ class QlaserFPGA:
         return int(data) & 0xFFFF, int(data) >> 16
     
     def read_wave_table(self, start_addr: int = 0, length: int = C_LENGTH_WAVEFORM) -> list[int]:
-        """Read a list of values from the wave table starting at the given address.
+        """Read a list of values from the waveform table starting at the given address.
 
         Args:
             start_addr (int, optional): Starting address of the wave table. Defaults to 0.
@@ -373,7 +373,7 @@ class QlaserFPGA:
         return configs
         
     def write_wave_table(self, start_addr: int, values: list[int], all_chan: bool = False) -> int:
-        """Write a list of values pairs to the wave table starting at the given even-numbered address.
+        """Write two 16-bit integer value to the wave table starting at the given even-numbered address.
 
         Args:
             start_addr (int): Starting address of the wave table
@@ -420,12 +420,12 @@ class QlaserFPGA:
                         n_scale_time: float,
                         n_flattop: int,
                         n_entry: int | None = None) -> None:
-        """Write pulse parameters to the FPGA.
+        """Write pulse definition/parameters to the FPGA.
         Prints warnings if parameters exceed certain limits and
         Whenever this function gets called, a entry pointer increments by 1.
 
         Args:
-            n_wave (int): Wave ID of the waveform. Can be calculated by wave_id = start_address + wave_length * 2^16
+            n_wave (int): Wave ID of a waveform.
             n_start_time (int): Start time of the pulse. Minimum is 5.
             n_scale_gain (float): Amplitude scaling factor
             n_scale_time (float): Time step size

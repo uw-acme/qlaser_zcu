@@ -1,5 +1,14 @@
+.. _api:
+
 API Reference
 =================
+
+Pulse configuration parameters
+--------------------------------
+
+.. autoclass:: qlaser_zcu.qlaser_fpga.PulseConfig()
+   :members:
+
 Main front-end interface
 --------------------------------
 
@@ -20,10 +29,4 @@ Core `qlaser_zcu.qlaser_fpga.QlaserFPGA` class
 Core class to interact with the FPGA. This class is can be used directly for more advanced or fine-grained usages.
 
 .. autoclass:: qlaser_zcu.qlaser_fpga.QlaserFPGA()
-   :members:
-
-Pulse configuration parameters
---------------------------------
-
-.. autoclass:: qlaser_zcu.qlaser_fpga.PulseConfig()
    :members:

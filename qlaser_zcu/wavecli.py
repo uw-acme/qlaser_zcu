@@ -44,7 +44,7 @@ def get_defns(channel: int, port: str | None = None) -> list[PulseConfig]:
         port (str | None, optional): Port to connect to FPGA. Defaults to None to auto-detect.
 
     Returns:
-        pd.DataFrame: Pulse definitions
+        list[PulseConfig]: Pulse definitions
     """
     fpga = QlaserFPGA(portname=port)
     fpga.chan_sel(channel)
@@ -69,7 +69,7 @@ def enable_channels(channels: list[int], port: str | None = None):
     QlaserFPGA(portname=port).chan_en(channels)
 
 def add_wave(values: list[int], keep_previous: bool = True, port: str | None = None) -> int:
-    """Load a wave into the FPGA. Note that values must be DAC values between 0 and the maximum DAC value. Refer to your DAC's datasheet for voltage value to DAC value conversion.
+    """Load a wave into the FPGA memory. Note that values must be DAC values between 0 and the maximum DAC value. Refer to your DAC's datasheet for voltage value to DAC value conversion.
 
     Args:
         values (list[int]): Wave values, must be in integers between 0 and maximum DAC value. Note that numpy integer types are not supported.
@@ -121,11 +121,10 @@ def set_defns(
     """Load pulse definitions into the FPGA
 
     Args:
-        definitions (DictLike): Wave definitions
-        seq_length (int): Total duation to run for **all** channels
+        definitions (DictLike): pulse definitions
+        seq_length (int): Total pulse sequence duation to run for **all** channels, in 10 ns.
         channel (int): Channel (0-31) to load the wave(s) into.
         port (str | None, optional): Port to connect to FPGA. Defaults to None to auto-detect.
-        reset (bool, optional): clear and reset the system. Defaults to False.
         flush_type (str, optional): FPGA seral output to log type. Either "info" or "debug". Defaults to "debug". 
     """
     # Make sure definitions param is a list
