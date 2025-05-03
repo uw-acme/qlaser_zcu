@@ -1,7 +1,18 @@
+.. _api:
+
 API Reference
 =================
-Main front-end tools
----------------------
+
+Pulse configuration parameters
+--------------------------------
+
+.. autoclass:: qlaser_zcu.qlaser_fpga.PulseConfig()
+   :members:
+
+Main front-end interface
+--------------------------------
+
+front-end interface to generate pulsed waveform for the FPGA
 
 .. automodule:: qlaser_zcu
     :members:
@@ -9,19 +20,13 @@ Main front-end tools
 .. automodule:: qlaser_zcu.constants
     :members:
 
-Functions and wrappers to interact with the FPGA.
-
-.. automodule:: qlaser_zcu.genwave
+.. automodule:: qlaser_zcu.wavecli
     :members:
-    
 
-Barebone Class to interact directly with the FPGA
---------------------------------------------------
+Core `qlaser_zcu.qlaser_fpga.QlaserFPGA` class
+-----------------------------------------------
 
-"Raw" class to interact with the FPGA. This class is can be used directly for more advanced or fine-grained usages. It is the base class for the :class:`QlaserFPGA` class.
+Core class to interact with the FPGA. This class is can be used directly for more advanced or fine-grained usages.
 
 .. autoclass:: qlaser_zcu.qlaser_fpga.QlaserFPGA()
-   :members:
-
-.. autoclass:: qlaser_zcu.qlaser_fpga.PulseConfig()
    :members:

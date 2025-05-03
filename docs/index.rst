@@ -9,10 +9,17 @@ qlaser-zcu documentation
 Python package that interface with the NanoQ Laser hardware controller on an Xilinx ZCU102 FPGA board.
 
 .. toctree::
+   :caption: Glossary
+   :maxdepth: 2
+
+   glossary_terms.rst
+
+.. toctree::
    :caption: Introduction
    :maxdepth: 2
 
    overview.rst
+   background.rst
 
 .. toctree::
    :caption: Getting Started
@@ -24,16 +31,10 @@ Python package that interface with the NanoQ Laser hardware controller on an Xil
    :caption: System Components
    :maxdepth: 2
 
-   hardware.rst
+   system.rst
 
 .. toctree::
    :caption: API Reference
    :maxdepth: 2
 
    api.rst
-
-.. toctree::
-   :caption: Glossary
-   :maxdepth: 2
-
-   glossary_terms.rst
