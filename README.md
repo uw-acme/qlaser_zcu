@@ -1,14 +1,14 @@
 # Qlaser ZCU
-Python package that interface with the NanoQ Laser hardware controller on an Xilinx ZCU102 FPGA board.
+Python package that interfaces with the NanoQ Laser hardware controller on an Xilinx ZCU102 FPGA board.
 
 ## Use
-This repo has been setup as a python package. Simply install into your python environemnt with 
+This repo has been set up as a Python package. All its dependencies should be able to resolve themselves using `pip`. Install into your Python (3.11 and up) environment with 
 ```
-pip install git+https://https://github.com/uw-acme/qlaser_zcu.git
+pip install git+https://github.com/uw-acme/qlaser_zcu.git
 ```
-It is recommended to create a virtual environment with `python -m venv .venv` and install the package into that environment, as this project is in its very early development and many things are not set yet
+It is recommended to create a virtual environment with `python -m venv .venv` and install the package into that environment, as this project is in its very early development, and many things are not set yet
 
 ## Develop
-This repo/package is build with [Poetry](https://python-poetry.org/docs/). You may clone this repo into your devices and setup a development envireonment with `poetry install` command. This will craete a python environment and download all nessisary packages into the environment
+This repo/package is built with [Poetry](https://python-poetry.org/docs/). You may clone this repo onto your devices and set up a development environment with the  `poetry install` command. This will create a Python environment and download all necessary packages into the environment
 
-To build a documentation, goto `docs` folder and run `make html` command. This will create a html documentation in `docs/build/html` folder. Open `index.html` file in a browser to view the documentation
+To build the documentation, go to the `docs` folder and run the `make html` command. This will create an HTML documentation in the `docs/build/html` folder. Open the `index.html` file in a browser to view the documentation
