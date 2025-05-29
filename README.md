@@ -1,5 +1,5 @@
 # Qlaser ZCU
-Python package that interfaces with the NanoQ Laser hardware controller on an Xilinx ZCU102 FPGA board.
+Python package that interfaces with the Nano Quantum Laser hardware controller on an Xilinx ZCU102 FPGA board.
 
 ## Use
 This repo has been set up as a Python package. All its dependencies should be able to resolve themselves using `pip`. Install into your Python (3.11 and up) environment with 
